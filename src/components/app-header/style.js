@@ -61,7 +61,7 @@ export const HeaderLeft = styled.div`
         background: #000;
         text-decoration: none;
       }
-
+      
       .active .icon {
         position: absolute;
         display: inline-block;
