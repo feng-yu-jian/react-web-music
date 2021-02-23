@@ -1,71 +1,67 @@
-import React from 'react';
+import React from 'react'
+import { Redirect } from 'react-router-dom'
 
-import HYDiscover from "@/pages/discover";
-import HYRecommend from "../pages/discover/c-pages/recommend";
-import HYRanking from "../pages/discover/c-pages/ranking";
-import HYSongs from "../pages/discover/c-pages/songs";
-import HYDjradio from "../pages/discover/c-pages/djradio";
-import HYArtist from "../pages/discover/c-pages/artist";
-import HYAlbum from "../pages/discover/c-pages/album";
+const FDiscover = React.lazy(() => import('@/pages/discover'))
+const FRecommend = React.lazy(() => import('@/pages/discover/child-pages/recommend'))
+const FToplist = React.lazy(() => import('@/pages/discover/child-pages/toplist'))
+const FSongs = React.lazy(() => import('@/pages/discover/child-pages/songs'))
+const FDjradio = React.lazy(() => import('@/pages/discover/child-pages/djradio'))
+const FArtist = React.lazy(() => import('@/pages/discover/child-pages/artist'))
+const FAlbum = React.lazy(() => import('@/pages/discover/child-pages/album'))
 
-import HYMine from "@/pages/mine";
-import HYFriend from "@/pages/friend";
-import { Redirect } from "react-router-dom";
+const FSongDetail = React.lazy(() => import('@/pages/player'))
+const FFriend = React.lazy(() => import('@/pages/friend'))
+const FMine = React.lazy(() => import('@/pages/mine'))
+
+const FSearch = React.lazy(() => import('@/pages/search'))
+const FSingle = React.lazy(() => import('@/pages/search/child-pages/single'))
+const FSinger = React.lazy(() => import('@/pages/search/child-pages/singer'))
+const FSearchAlbum = React.lazy(() => import('@/pages/search/child-pages/album'))
+
+const F404 = React.lazy(() => import('@/pages/404'))
+
 
 const routes = [
+  { path: '/', exact: true, render: () => <Redirect to="/discover" /> },
   {
-    path: "/",
-    exact: true,
-    render: () => (
-      <Redirect to="/discover"/>
-    )
-  },
-  {
-    path: "/discover",
-    component: HYDiscover,
+    path: '/discover',
+    component: FDiscover,
     routes: [
       {
-        path: "/discover",
+        path: '/discover',
         exact: true,
-        render: () => (
-          <Redirect to="/discover/recommend"/>
-        )
+        render: () => <Redirect to="/discover/recommend" />,
       },
+      { path: '/discover/recommend', component: FRecommend },
+      { path: '/discover/ranking', component: FToplist },
+      { path: '/discover/album', component: FAlbum },
+      { path: '/discover/djradio', component: FDjradio },
+      { path: '/discover/artist', component: FArtist },
+      { path: '/discover/songs', component: FSongs },
+      { path: '/discover/song', component: FSongDetail },
+    ],
+  },
+  { path: '/mine', component: FMine },
+  { path: '/friend', component: FFriend },
+  {
+    path: '/search',
+    component: FSearch,
+    routes: [
       {
-        path: "/discover/recommend",
-        component: HYRecommend
-      },
-      {
-        path: "/discover/ranking",
-        component: HYRanking
-      },
-      {
-        path: "/discover/songs",
-        component: HYSongs
-      },
-      {
-        path: "/discover/djradio",
+        path: '/search',
         exact: true,
-        component: HYDjradio
+        render: () => <Redirect to="/search/single?song=&type=1" />,
       },
-      {
-        path: "/discover/artist",
-        component: HYArtist
-      },
-      {
-        path: "/discover/album",
-        component: HYAlbum
-      }
+      { path: '/search/single', component: FSingle },
+      { path: '/search/singer', component: FSinger },
+      { path: '/search/album/', component: FSearchAlbum }
     ]
   },
   {
-    path: "/mine",
-    component: HYMine
-  },
-  {
-    path: "/friend",
-    component: HYFriend
-  },
-];
+    path: '*',
+    exact: true,
+    component: F404
+  }
+]
 
-export default routes;
+export default routes

@@ -1,43 +1,49 @@
-import React, { memo } from 'react';
-import PropTypes from 'prop-types';
+import React, { memo } from 'react'
+import propTypes from 'prop-types'
+import { RcmHeaderLeft, RcmHeaderRight, RcmHeaderWrapper } from './style'
 
-import { HeaderWrapper } from './style';
-
-const HYThemeHeaderRCM = memo(function(props) {
-  const { title, keywords } = props;
-
+const ThemeHeaderRmc = function ThemeHeaderRmc(props) {
+  const { title, keywords, showIcon, right } = props
   return (
-    <HeaderWrapper className="sprite_02">
-      <div className="left">
-        <h3 className="title">{title}</h3>
-        <div className="keyword">
+    <RcmHeaderWrapper showIcon={showIcon}>
+      <RcmHeaderLeft>
+        <h2 className="hot-title">
+          <a href="/#" className="no-link hot-text">
+            {title}
+          </a>
+        </h2>
+        <ul className="keywords">
           {
-            keywords.map((item, index) => {
+            keywords.map(item => {
               return (
-                <div className="item" key={item}>
-                  <a href="todo">{item}</a>
-                  <span className="divider">|</span>
-                </div>
+                <li className="item" key={item}>
+                  <a href="/">{item}</a>
+                  <span className="line">|</span>
+                </li>
               )
             })
           }
-        </div>
-      </div>
-      <div className="right">
-        <a href="todo">更多</a>
-        <i className="icon sprite_02"></i>
-      </div>
-    </HeaderWrapper>
+        </ul>
+      </RcmHeaderLeft>
+      <RcmHeaderRight>
+        <span>{right}</span>
+        {showIcon && <i className="icon"></i>}
+      </RcmHeaderRight>
+    </RcmHeaderWrapper>
   )
-})
-
-HYThemeHeaderRCM.propTypes = {
-  title: PropTypes.string.isRequired,
-  keywords: PropTypes.array
 }
 
-HYThemeHeaderRCM.defaultProps = {
-  keywords: []
+ThemeHeaderRmc.propTypes = {
+  title: propTypes.string.isRequired,
+  keywords: propTypes.array,
+  showIcon: propTypes.bool,
+  right: propTypes.any
 }
 
-export default HYThemeHeaderRCM;
+ThemeHeaderRmc.defaultProps = {
+  keywords: [],
+  showIcon: true,
+  right: '更多'
+}
+
+export default memo(ThemeHeaderRmc)

@@ -1,131 +1,121 @@
-import styled from 'styled-components';
+import styled from 'styled-components'
 
 export const TopRankingWrapper = styled.div`
-  flex: 1;
+  width: 230px;
 
-  .header {
-    height: 100px;
+  .ranking-header {
     display: flex;
-
-    margin: 20px 0 0 20px;
+    height: 120px;
+    padding: 20px 0 0 19px;
 
     .image {
-      width: 80px;
-      height: 80px;
       position: relative;
-
-      img {
-        width: 80px;
-        height: 80px;
-      }
+      height: 80px;
     }
 
-    .info {
-      margin: 5px 0 0 10px;
+    .tit {
+      width: 116px;
+      margin: 6px 0 0 10px;
 
-      a {
-        font-size: 14px;
-        color: #333;
-        font-weight: 700;
+      div > h3 {
+        font-weight: bold !important;
       }
 
       .btn {
-        display: inline-block;
-        text-indent: -9999px;
-        width: 22px;
-        height: 22px;
-        margin: 8px 10px 0 0;
-        cursor: pointer;
-      }
+        display: flex;
+        margin-top: 8px;
+        .play,
+        .favourite {
+          width: 22px;
+          height: 22px;
+        }
 
-      .play {
-        background-position: -267px -205px;
-      }
+        .play {
+          background-position: -267px -205px;
+          margin-right: 8px;
 
-      .favor {
-        background-position: -300px -205px;
+          &:hover {
+            background-position: -267px -235px;
+          }
+        }
+
+        .favourite {
+          background-position: -300px -205px;
+
+          &:hover {
+            background-position: -300px -235px;
+          }
+        }
       }
     }
   }
 
-  .list {
+  .ranking-list {
+    padding-left: 10px;
     .list-item {
-      position: relative;
       display: flex;
-      align-items: center;
       height: 32px;
+      line-height: 32px;
 
-      :nth-child(-n+3) .rank {
-        color: #c10d0c;
-      }
-
-      .rank {
+      .number {
         width: 35px;
         text-align: center;
-        margin-left: 10px;
         font-size: 16px;
       }
 
-      .info {
+      .song-name {
+        width: 185px;
+        font-size: 12px;
         color: #000;
-        width: 170px;
-        height: 17px;
-        line-height: 17px;
-        display: flex;
-        justify-content: space-between;
-
-        .name {
-          flex: 1;
-        }
-
-        .operate {
-          display: flex;
-          align-items: center;
-          display: none;
-          width: 82px;
-
-          .btn {
-            width: 17px;
-            height: 17px;
-            margin-left: 8px;
-            cursor: pointer;
-          }
-
-          .play {
-            background-position: -267px -268px;
-          }
-
-          .addto {
-            position: relative;
-            top: 2px;
-            background-position: 0 -700px;
-          }
-
-          .favor {
-            background-position: -297px -268px;
-          }
-        }
       }
 
-      
+      &:hover .song-name {
+        width: 96px;
+      }
 
-      &:hover {
-        .operate {
-          display: block;
+      &:hover .oper {
+        visibility: visible;
+        width: 93px;
+      }
+
+      .oper {
+        display: flex;
+        align-items: center;
+        visibility: hidden;
+        width: 0;
+        text-indent: -9999px;
+
+        .btn {
+          width: 17px;
+          height: 17px;
+          margin-left: 8px;
+          cursor: pointer;
+        }
+
+        .play {
+          background-position: -267px -268px;
+        }
+
+        .addto {
+          position: relative;
+          top: 2px;
+          background-position: 0 -700px;
+        }
+
+        .favourite {
+          background-position: -297px -268px;
         }
       }
     }
   }
 
-  .footer {
-    height: 32px;
+  .ranking-footer {
+    height: 33px;
     display: flex;
-    align-items: center;
-    margin-right: 32px;
     justify-content: flex-end;
-
-    a {
-      color: #000;
+    align-items: center;
+    .show-all {
+      margin-right: 15px;
     }
   }
 `

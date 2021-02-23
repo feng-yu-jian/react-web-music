@@ -1,124 +1,333 @@
-import React, { memo, useState, useEffect, useRef } from 'react';
-import { useDispatch, useSelector, shallowEqual } from 'react-redux';
+import React, { memo, useEffect, useState, useRef, useCallback } from 'react'
+import { shallowEqual, useDispatch, useSelector } from 'react-redux'
+import { NavLink } from 'react-router-dom'
+import { CSSTransition } from 'react-transition-group'
 
-import { getSizeImage, formatDate, getPlaySong } from '@/utils/format-utils';
-
-import { Slider } from 'antd';
+import { getSizeImage, formatDate, getPlayUrl } from '@/utils/format-utils.js'
 import {
-  PlaybarWrapper,
-  Control,
-  PlayInfo,
-  Operator
-} from './style';
-import { getSongDetailAction } from '../store/actionCreators';
-import { useCallback } from 'react';
+  getSongDetailAction,
+  changePlaySequenceAction,
+  changeCurrentIndexAndSongAction,
+  changeCurrentLyricIndexAction,
+} from '../store/actionCreator'
 
-export default memo(function HYAppPlayerBar() {
-  // props and state
-  const [currentTime, setCurrentTime] = useState(0);
-  const [progress, setProgress] = useState(0);
-  const [isChanging, setIsChanging] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
+import { Slider, Tooltip, message } from 'antd'
+import { DownloadOutlined, UndoOutlined } from '@ant-design/icons'
+import { Control, Operator, PlayerbarWrapper, PlayerInfo } from './stye'
 
-  // redux hook
-  const { currentSong } = useSelector(state => ({
-    currentSong: state.getIn(["player", "currentSong"])
-  }), shallowEqual);
-  const dispatch = useDispatch();
+import SliderPlaylist from './c-cpns/slider-playlist'
 
-  // other hooks
-  const audioRef = useRef();
+export default memo(function FAppPlayerBar() {
+  const [currentTime, setCurrentTime] = useState(0) // 用于保存当前播放的时间
+  const [isShowBar, setIsShowBar] = useState(false) // 是否显示音量播放条
+  const [progress, setProgress] = useState(0) // 滑块进度
+  const [isChanging, setIsChanging] = useState(false) // 是否正在滑动
+  const [isPlaying, setIsPlaying] = useState(false) // 是否正在播放
+  const [isShowSlide, setIsShowSlide] = useState(false) // 是否显示播放列表
+
+  const dispatch = useDispatch()
+  const audioRef = useRef()
+  const {
+    currentSong,
+    playSequence,
+    firstLoad,
+    lyricList = [],
+    currentLyricIndex,
+    playlistCount,
+  } = useSelector((state) => ({
+    currentSong: state.getIn(['player', 'currentSong']),
+    playSequence: state.getIn(['player', 'playSequence']),
+    firstLoad: state.getIn(['player', 'firstLoad']),
+    lyricList: state.getIn(['player', 'lyricList']),
+    currentLyricIndex: state.getIn(['player', 'currentLyricIndex']),
+    playlistCount: state.getIn(['player', 'playListCount']),
+  }), shallowEqual)
+
+
+  // 请求歌曲的详情,初始化歌曲列表
   useEffect(() => {
-    dispatch(getSongDetailAction(167876));
-  }, [dispatch]);
-  useEffect(() =>  {
-    audioRef.current.src = getPlaySong(currentSong.id);
-  }, [currentSong]);
+    dispatch(getSongDetailAction(167876))
+  }, [dispatch])
 
-  // other handle
-  const picUrl = (currentSong.al && currentSong.al.picUrl) || "";
-  const singerName = (currentSong.ar && currentSong.ar[0].name) || "未知歌手";
-  const duration = currentSong.dt || 0;
-  const showDuration = formatDate(duration, "mm:ss");
-  const showCurrentTime = formatDate(currentTime, "mm:ss");
+  // 设置音频src
+  useEffect(() => {
+    audioRef.current.src = getPlayUrl(currentSong.id)
+    // 设置音量
+    audioRef.current.volume = 0.5
+    // 如果不是首次加载: 播放音乐
+    if (!firstLoad) setIsPlaying(true + Math.random())
+  }, [currentSong, firstLoad])
 
-  // handle function
-  const playMusic = () => {
-    isPlaying ? audioRef.current.pause(): audioRef.current.play();
-    setIsPlaying(!isPlaying);
+  // 切换歌曲时播放音乐
+  useEffect(() => {
+    isPlaying && audioRef.current.play()
+  }, [isPlaying])
+
+  const picUrl = currentSong.al && currentSong.al.picUrl // 图片url
+  const songName = currentSong.name // 歌曲名字
+  const singerName = currentSong.ar && currentSong.ar[0].name // 作者名字
+  const duration = currentSong.dt // 播放总时间
+  const songUrl = getPlayUrl(currentSong.id) // 歌曲URL
+
+  // 点击播放或暂停按钮后音乐
+  const playMusic = useCallback(() => {
+    setIsPlaying(!isPlaying)
+    // 播放音乐
+    isPlaying ? audioRef.current.pause() : audioRef.current.play()
+  }, [isPlaying])
+
+  // 切换歌曲(点击播放下一首或上一首音乐)
+  const changeSong = (tag) => {
+    // 首先判断播放列表中是否存在音乐，再决定是否播放
+    if (playlistCount < 1) {
+      message.error('请添加播放列表', 0.5)
+      return
+    }
+    dispatch(changeCurrentIndexAndSongAction(tag))
+    setIsPlaying(true + Math.random()) // 更改播放状态图标
   }
 
-  const timeUpdate = (e) => {
+  // 歌曲播放触发
+  function timeUpdate(e) {
+    // 没有在滑动滑块时触发(默认时没有滑动)
+    let currentTime = e.target.currentTime
     if (!isChanging) {
-      setCurrentTime(e.target.currentTime * 1000);
-      setProgress(currentTime / duration * 100);
+      setCurrentTime(currentTime * 1000)
+      setProgress(((currentTime * 1000) / duration) * 100)
+    }
+
+    // 当前音乐处于播放状态(用于搜索音乐,点击item播放音乐时使用)
+    if (currentTime > 0.1 && currentTime < 0.5) setIsPlaying(true)
+
+    // 获取当前播放歌词
+    let i = 0 //用于获取歌词的索引
+    // 2.遍历歌词数组
+    for (; i < lyricList.length; i++) {
+      const item = lyricList[i]
+      if (currentTime * 1000 < item.totalTime) {
+        // 4.跳出循环
+        break
+      }
+    }
+    // 对dispatch进行优化,如果index没有改变,就不进行dispatch
+    if (currentLyricIndex !== i - 1) {
+      dispatch(changeCurrentLyricIndexAction(i - 1))
+    }
+
+    // 展示歌词
+    const lyricContent = lyricList[i - 1] && lyricList[i - 1].content
+    lyricContent &&
+      message.open({
+        key: 'lyric',
+        content: lyricContent,
+        duration: 0,
+        className: 'lyric-css',
+      })
+
+    // 如果显示播放列表那么不展示歌词
+    isShowSlide && message.destroy('lyric')
+  }
+
+  // 滑动滑块时触发
+  const sliderChange = useCallback((value) => {
+    // 滑动滑块时:更改标识变量为false,此时不会触发onTimeUpdate(歌曲播放事件)
+    setIsChanging(true)
+    // 更改"当前播放时间"要的是毫秒数: 241840(总毫秒)
+    const currentTime = (value / 100) * duration
+    setCurrentTime(currentTime)
+    // 更改进度条值
+    setProgress(value)
+  }, [duration])
+
+  // 手指抬起时触发
+  const slideAfterChange = useCallback((value) => {
+    // 重新设置当前播放时长 value(进度)/100 * duration(总毫秒数) / 1000 得到当前播放的"秒数"
+    const currentTime = ((value / 100) * duration) / 1000
+    // 要的是秒数
+    audioRef.current.currentTime = currentTime
+    // 设置当前播放时间的state,设置的是'毫秒',所以需要*1000
+    setCurrentTime(currentTime * 1000)
+    setIsChanging(false)
+    // 更改播放状态
+    setIsPlaying(true)
+    // 播放音乐
+    audioRef.current.play()
+  }, [duration, audioRef])
+
+  // 改变播放列表是否显示
+  const changePlaylistShow = useCallback(() => {
+    setIsShowSlide(!isShowSlide)
+  }, [isShowSlide])
+
+  // 更改音量
+  function changingVolume(value) {
+    audioRef.current.volume = value / 100
+  }
+
+  // 更改播放顺序
+  const changeSequence = () => {
+    let currentSequence = playSequence
+    currentSequence++
+    if (currentSequence > 2) {
+      currentSequence = 0
+    }
+    dispatch(changePlaySequenceAction(currentSequence))
+  }
+
+  // 切换下一首歌曲,不播放音乐
+  const nextMusic = (tag) => {
+    // 需要需要派发action,所以具体逻辑在actionCreator中完成
+    dispatch(changeCurrentIndexAndSongAction(tag))
+    setIsPlaying(false)
+  }
+
+  // 当前歌曲播放结束后
+  function handleTimeEnd() {
+    // 单曲循环
+    if (playSequence === 2) {
+      audioRef.current.currentTime = 0
+      audioRef.current.play()
+    } else {
+      // 播放下一首
+      dispatch(changeCurrentIndexAndSongAction(1))
+      // 更改播放状态
+      setIsPlaying(true + Math.random())
     }
   }
 
-  const sliderChange = useCallback((value) => {
-    setIsChanging(true);
-    const currentTime = value / 100 * duration;
-    setCurrentTime(currentTime);
-    setProgress(value);
-  }, [duration]);
+  // 播放音乐
+  const forcePlayMusic = () => {
+    setIsPlaying(true + Math.random())
+  }
 
-  const sliderAfterChange = useCallback((value) => {
-    const currentTime = value / 100 * duration / 1000;
-    audioRef.current.currentTime = currentTime;
-    setCurrentTime(currentTime * 1000);
-    setIsChanging(false);
-
-    if (!isPlaying) {
-      playMusic();
-    }
-  }, [duration, isPlaying, playMusic]);
-
+  // 重新播放音乐
+  const refreshMusic = () => {
+    audioRef.current.currentTime = 0
+    audioRef.current.play()
+  }
 
   return (
-    <PlaybarWrapper className="sprite_player">
-      <div className="content wrap-v2">
+    <PlayerbarWrapper className="sprite_player">
+      <div className="w980 content">
         <Control isPlaying={isPlaying}>
-          <button className="sprite_player prev"></button>
-          <button className="sprite_player play" onClick={e => playMusic()}></button>
-          <button className="sprite_player next"></button>
+          <button
+            className="sprite_player pre"
+            onClick={(e) => changeSong(-1)}
+          ></button>
+          <button className="sprite_player play" onClick={playMusic}></button>
+          <button
+            className="sprite_player next"
+            onClick={(e) => changeSong(1)}
+          ></button>
         </Control>
-        <PlayInfo>
-          <div className="image">
-            <a href="/#">
-              <img src={getSizeImage(picUrl, 35)} alt="" />
-            </a>
-          </div>
-          <div className="info">
-            <div className="song">
-              <span className="song-name">{currentSong.name}</span>
-              <a href="#/" className="singer-name">{singerName}</a>
+        <PlayerInfo>
+          <NavLink
+            to={{
+              pathname: '/discover/song',
+            }}
+            className="image"
+          >
+            <img src={getSizeImage(picUrl, 35)} alt="" />
+          </NavLink>
+          <div className="play-detail">
+            <div className="song-info">
+              <NavLink to="/discover/song" className="song-name">
+                {songName}
+              </NavLink>
+              <NavLink to="/author" className="no-link singer-name">
+                {singerName}
+              </NavLink>
             </div>
-            <div className="progress">
-              <Slider defaultValue={30} 
-                      value={progress}
-                      onChange={sliderChange}
-                      onAfterChange={sliderAfterChange}/>
-              <div className="time">
-                <span className="now-time">{showCurrentTime}</span>
-                <span className="divider">/</span>
-                <span className="duration">{showDuration}</span>
-              </div>
-            </div>
+            <Slider
+              defaultValue={0}
+              value={progress}
+              onChange={sliderChange}
+              onAfterChange={slideAfterChange}
+            />
           </div>
-        </PlayInfo>
-        <Operator>
+          <div className="song-time">
+            <span className="now-time">{formatDate(currentTime, 'mm:ss')}</span>
+            <span className="total-time">
+              {' '}
+              / {duration && formatDate(duration, 'mm:ss')}
+            </span>
+          </div>
+        </PlayerInfo>
+        <Operator playSequence={playSequence}>
           <div className="left">
-            <button className="sprite_player btn favor"></button>
-            <button className="sprite_player btn share"></button>
+            <Tooltip title="下载音乐">
+              {/* a标签下添加rel="noopener noreferrer"提高安全性 */}
+              <a
+                download={currentSong && currentSong.name}
+                target="_blank"
+                rel="noopener noreferrer"
+                href={songUrl}
+              >
+                <DownloadOutlined />
+              </a>
+            </Tooltip>
+            <Tooltip title="重新播放">
+              <UndoOutlined className="refresh" onClick={refreshMusic} />
+            </Tooltip>
           </div>
           <div className="right sprite_player">
-            <button className="sprite_player btn volume"></button>
-            <button className="sprite_player btn loop"></button>
-            <button className="sprite_player btn playlist"></button>
+            <button
+              className="sprite_player btn volume"
+              onClick={(e) => setIsShowBar(!isShowBar)}
+            ></button>
+            <Tooltip
+              title={[
+                '顺序播放',
+                '随机播放',
+                '单曲循环',
+              ].filter((item, index) =>
+                index === playSequence && item
+              )}
+            >
+              <button
+                className="sprite_player btn loop"
+                onClick={(e) => changeSequence()}
+              ></button>
+            </Tooltip>
+            <button
+              className="sprite_player btn playlist"
+              // 阻止事件捕获,父元素点击事件,不希望点击子元素也触发该事件
+              onClick={(e) => setIsShowSlide(!isShowSlide)}
+            >
+              <Tooltip title="播放列表">
+                <span>{playlistCount}</span>
+              </Tooltip>
+              <CSSTransition
+                in={isShowSlide}
+                timeout={3000}
+                classNames="playlist"
+              >
+                <SliderPlaylist
+                  isShowSlider={isShowSlide}
+                  playlistCount={playlistCount}
+                  closeWindow={changePlaylistShow}
+                  playMusic={forcePlayMusic}
+                  changeSong={nextMusic}
+                  isPlaying={isPlaying}
+                />
+              </CSSTransition>
+            </button>
+          </div>
+          <div
+            className="sprite_player top-volume"
+            style={{ display: isShowBar ? 'block' : 'none' }}
+          >
+            <Slider vertical defaultValue={50} onChange={changingVolume} />
           </div>
         </Operator>
       </div>
-      <audio ref={audioRef} onTimeUpdate={timeUpdate} />
-    </PlaybarWrapper>
+      <audio
+        id="audio"
+        ref={audioRef}
+        onTimeUpdate={timeUpdate}
+        onEnded={handleTimeEnd}
+        preload="auto"
+      />
+    </PlayerbarWrapper>
   )
-});
+})
