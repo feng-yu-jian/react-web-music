@@ -26,7 +26,7 @@ const ThemeLoginForm = (props) => {
 
   const dispatch = useDispatch()
   const onFinish = ({ username, password }) => {
-    console.log(username,password)
+    // console.log(username,password)
     dispatch(getLoginProfileInfo(username, password, true))
   }
 
